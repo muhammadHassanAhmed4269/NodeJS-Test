@@ -61,7 +61,7 @@ License
 This project is licensed under the MIT License.
 
 Contact
-For any inquiries or support regarding the Chat App, please contact your-email@example.com.
+For any inquiries or support regarding the Chat App, please contact hassan.m.8537@gmail.com.
 
 Feel free to modify and expand upon this README template to include additional details specific to your project. Good luck with your Chat App! If you have any further questions or need assistance, feel free to ask.
 
