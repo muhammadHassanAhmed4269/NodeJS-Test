@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <link rel="stylesheet" href="/public/style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        #chatContainer {
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 160px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        #sendButton,
+        #searchButton {
+            width: 70px;
+            padding: 10px;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        #sendButton:hover,
+        #searchButton:hover {
+            background-color: #0056b3;
+        }
+
+        .message {
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .metadata {
+            color: #777;
+            font-size: 0.8em;
+        }
+
+        .metadata b {
+            color: #333;
+        }
+
+        .delete-for-me,
+        .delete-for-everyone {
+            background-color: #dc3545;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+
+        .delete-for-me:hover,
+        .delete-for-everyone:hover {
+            background-color: #c82333;
+        }
+
+        .delete-for-me:focus,
+        .delete-for-everyone:focus {
+            outline: none;
+        }
+
+        .delete-for-me:active,
+        .delete-for-everyone:active {
+            transform: translateY(1px);
+        }
+
+        .logout-link {
+            text-align: right;
+            margin-top: -30px;
+        }
+
+        .logout-link a {
+            color: #007bff;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chatContainer">
+        {{#user}}
+        <div class="logout-link" style="margin-top: 2%;">
+            <a href="/messages">My Messages</a>
+            <a href="/logout">Logout</a>
+        </div>
+        <h1>Welcome {{username}}</h1>
+        <input type="hidden" id="userId" value="{{ _id }}">
+        <label for="messageInput">
+            <input type="text" name="message" id="messageInput" placeholder="Enter message">
+            <button id="sendButton">Send</button>
+        </label>
+        <label for="searchInput">
+            <input type="text" name="search" id="searchInput" placeholder="Search messages">
+            <button id="searchButton">Search</button>
+        </label>
+        {{/user}}
+        <div id="messageContainer">
+            {{#myMessages}}
+            <div id="sentMessages" style="text-align: left;">
+                <div class="message">
+                    <p>{{this.content}}</p>
+                    <span class="metadata">Sent by <b>Myself</b></span>
+                    <button id="{{this._id}}" class="delete-for-me">Delete for Me</button>
+                    <button id="{{this._id}}" class="delete-for-everyone">Delete for Everyone</button>
+                </div>
+            </div>
+            {{/myMessages}}
+            {{#othersMessages}}
+            <div id="receivedMessages" style="text-align: right;">
+                <div class="message" id="message_{{this._id}}">
+                    <p>{{this.content}}</p>
+                    <span class="metadata">Sent by <b>{{this.sender.username}}</b></span>
+                </div>
+            </div>
+            {{/othersMessages}}
+        </div>
+    </div>
+</body>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        const socket = io(); // Make sure Socket.IO is properly initialized
+        const userId = $('#userId').val();
+        const messageInput = $('#messageInput');
+        const sendButton = $('#sendButton');
+        const messageContainer = $('#messageContainer');
+        const deleteForMe = $('.delete-for-me');
+        const deleteForEveryone = $('.delete-for-everyone');
+        const searchInput = $('#searchInput');
+        const searchButton = $('#searchButton');
+
+        if (!socket) {
+            console.error("Socket connection failed.");
+        }
+
+        socket.on('connect', function () {
+            console.log("Socket connected.");
+        });
+
+        socket.on('error', function (error) {
+            console.error("Socket error:", error);
+        });
+
+        sendButton.on('click', function (event) {
+            const messageValue = messageInput.val();
+            console.log("Sending message:", messageValue);
+            socket.emit('new message', { _id: userId, content: messageValue });
+            const messageDiv = $(`<div class="message">
+                                    <p>${messageValue}</p>
+                                    <span class="metadata">Sent by <b>Myself</b></span>
+                                    <button class="delete-for-me">Delete for Me</button>
+                                    <button class="delete-for-everyone">Delete for Everyone</button>
+                                </div>`);
+            messageContainer.find('#sentMessages').append(messageDiv);
+            location.reload()
+        });
+
+        socket.on('new message', function (data) {
+            console.log("Received message:", data);
+            console.log(JSON.stringify(data.sender._id) !== JSON.stringify(userId))
+            if (JSON.stringify(data.sender._id) !== JSON.stringify(userId)) {
+                const messageDiv = $(`<div class="message" id="message_${data.messageId}">
+                                    <p>${data.content}</p>
+                                    <span class="metadata">Sent by <b>${data.sender.username}</b></span>
+                                </div>`);
+                messageContainer.find('#receivedMessages').append(messageDiv);
+                location.reload()
+            }
+        });
+
+        deleteForMe.on('click', function () {
+            const _id = $(this).attr('id').valueOf()
+            socket.emit('delete for me', { _id })
+            $(this).closest('.message').remove();
+        });
+
+        deleteForEveryone.on('click', function () {
+            const _id = $(this).attr('id').valueOf();
+            $(this).closest('.message').replaceWith('<p>This message has been deleted</p>');
+            socket.emit('delete for everyone', { _id })
+        });
+
+        searchInput.on('input', function () {
+            const searchTerm = searchInput.val().trim().toLowerCase();
+            $('.message').each(function () {
+                const messageText = $(this).find('p').text().toLowerCase();
+                if (messageText.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        socket.on('delete for everyone', function (data) {
+            location.reload()
+        });
+
+        socket.on('delete for me', function (data) {
+            location.reload()
+        });
+    });
+</script>
+
+
+</html>
