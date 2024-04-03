@@ -1,4 +1,4 @@
-Chat App
+#Chat App
 Overview
 The Chat App is a real-time messaging platform that allows users to communicate with each other instantly. Users can send messages, receive messages, and delete messages either for themselves or for everyone in the conversation. The app provides a seamless and interactive chatting experience for users.
 
